@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ParaCloak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c07; --panel:#12140d; --panel2:#171a10; --line:#2a2e1e;
+  --ink:#dfe3d0; --dim:#848a6c; --accent:#b6ff3c; --accent-dim:#7c9c2e;
+  --danger:#ff6a5c;
+}
+*{box-sizing:border-box}
+html{height:100%}
+body{
+  margin:0; height:100%; background:var(--bg); color:var(--ink);
+  font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow:hidden;
+}
+#app{display:flex; height:100%; width:100%}
+aside#panel{
+  width:300px; min-width:300px; background:var(--panel);
+  border-right:1px solid var(--line); overflow-y:auto; padding:14px;
+}
+main#stage{
+  flex:1; position:relative; background:
+    linear-gradient(var(--panel2) 1px, transparent 1px) 0 0/100% 28px,
+    linear-gradient(90deg, var(--panel2) 1px, transparent 1px) 0 0/28px 100%,
+    var(--bg);
+  display:flex; align-items:center; justify-content:center; padding:24px; min-width:0;
+}
+canvas{max-width:100%; max-height:100%; border:1px solid var(--line); image-rendering:pixelated}
+.brand{display:flex; align-items:flex-start; gap:8px; margin-bottom:18px}
+.brand .dot{width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); margin-top:6px; flex:0 0 auto}
+.brand .titles{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0}
+.brand .name{font-weight:700; letter-spacing:.04em; font-size:15px}
+.brand .name em{color:var(--accent); font-style:normal}
+.brand .byline{font-size:9px; color:var(--dim); letter-spacing:.06em}
+.brand .ver{margin-left:auto; font-size:10px; color:var(--dim); margin-top:4px}
+.group{margin-bottom:18px; padding-bottom:16px; border-bottom:1px dashed var(--line)}
+.group:last-of-type{border-bottom:none}
+.group h2{
+  font-size:11px; letter-spacing:.08em; color:var(--dim); margin:0 0 10px;
+  display:flex; align-items:center; gap:6px; font-weight:500;
+}
+.group h2 span{color:var(--accent-dim)}
+.mini{
+  margin-left:auto; width:18px; height:18px; border-radius:3px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--accent); cursor:pointer; font-size:13px; line-height:1;
+}
+.subhead{font-size:9px; letter-spacing:.1em; color:var(--dim); margin:10px 0 6px}
+.subhead:first-child{margin-top:0}
+.preset-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.preset-grid button{
+  background:var(--panel2); border:1px solid var(--line); color:var(--ink);
+  padding:7px 4px; font-size:10px; letter-spacing:.03em; cursor:pointer; border-radius:3px;
+  font-family:inherit;
+}
+.preset-grid button.on{border-color:var(--accent); color:var(--accent); background:#1b220e}
+.preset-grid button:disabled{opacity:.35; cursor:default}
+.ctrl{display:grid; grid-template-columns:64px 30px 1fr; align-items:center; gap:8px; margin-bottom:8px}
+.ctrl label{font-size:10px; color:var(--dim); letter-spacing:.02em}
+.ctrl output{font-size:10px; color:var(--ink); text-align:right}
+.ctrl.toggle{grid-template-columns:1fr auto}
+input[type=range]{-webkit-appearance:none; width:100%; height:2px; background:var(--line); border-radius:2px; outline:none}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:11px; height:11px; border-radius:50%;
+  background:var(--accent); cursor:pointer; border:2px solid var(--bg); box-shadow:0 0 0 1px var(--accent);
+}
+input[type=range]::-moz-range-thumb{
+  width:9px; height:9px; border-radius:50%; background:var(--accent); border:2px solid var(--bg); cursor:pointer;
+}
+input[type=checkbox]{width:15px; height:15px; accent-color:var(--accent)}
+select{
+  width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--ink);
+  padding:6px 8px; font-family:inherit; font-size:10px; border-radius:3px; margin-bottom:8px;
+  cursor:pointer; letter-spacing:.04em;
+}
+select:focus{outline:1px solid var(--accent)}
+.swatch{display:grid; grid-template-columns:26px 1fr 20px; align-items:center; gap:8px; margin-bottom:6px}
+.swatch input[type=color]{width:26px; height:22px; border:1px solid var(--line); background:none; padding:0; cursor:pointer; border-radius:3px}
+.swatch .del{background:none; border:none; color:var(--dim); cursor:pointer; font-size:14px}
+.swatch .del:disabled{opacity:.25; cursor:default}
+.btn-row{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px}
+.btn-row button{
+  background:var(--panel2); border:1px solid var(--line); color:var(--ink);
+  padding:8px 4px; font-size:10px; letter-spacing:.06em; cursor:pointer; border-radius:3px; font-family:inherit;
+}
+.btn-row button.accent{border-color:var(--accent-dim); color:var(--accent)}
+.btn-row button:disabled{opacity:.35; cursor:not-allowed}
+.foot{display:flex; justify-content:space-between; font-size:10px; color:var(--dim); padding-top:4px}
+.foot b{color:var(--accent); font-weight:500}
+#hud{
+  position:absolute; top:10px; left:10px; right:10px;
+  display:flex; justify-content:space-between; font-size:10px; color:var(--dim); letter-spacing:.05em;
+  pointer-events:none;
+}
+#hud.busy #hud-status{color:var(--accent)}
+#hud.error #hud-status{color:var(--danger)}
+.mode-row{display:grid; gap:6px; margin-bottom:8px}
+.mode-row.cols-2{grid-template-columns:1fr 1fr}
+.mode-row.cols-4{grid-template-columns:repeat(4,1fr)}
+.mode-row button{
+  background:var(--panel2); border:1px solid var(--line); color:var(--dim);
+  padding:8px 4px; font-size:10px; letter-spacing:.06em; cursor:pointer; border-radius:3px; font-family:inherit;
+}
+.mode-row.cols-4 button{font-size:8px; padding:7px 2px; letter-spacing:.02em}
+.mode-row button.on{border-color:var(--accent); color:var(--accent); background:#1b220e}
+@media (max-width:720px){
+  #app{flex-direction:column}
+  aside#panel{width:100%; min-width:0; max-height:46vh; border-right:none; border-bottom:1px solid var(--line)}
+  main#stage{flex:1; min-height:0}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <div class="brand">
+      <span class="dot"></span>
+      <div class="titles">
+        <span class="name">PARA<em>CLOAK</em></span>
+        <span class="byline">camo generator</span>
+      </div>
+      <span class="ver">v3.2</span>
+    </div>
+
+    <section class="group">
+      <h2><span>01</span> GENERATOR</h2>
+      <div class="mode-row cols-2" id="mode-row">
+        <button data-mode="noise">NOISE</button>
+        <button data-mode="polygon">POLYGON</button>
+      </div>
+      <div id="polyshape-wrap" style="display:none">
+        <div class="subhead">SHAPE</div>
+        <div class="mode-row cols-4" id="polyshape-row">
+          <button data-shape="polygon">POLY</button>
+          <button data-shape="voronoi">VORONOI</button>
+          <button data-shape="cellular">CELL</button>
+          <button data-shape="blocks">BLOCKS</button>
+        </div>
+      </div>
+      <div id="polygon-controls"></div>
+      <div id="voronoi-controls"></div>
+      <div id="cellular-controls"></div>
+      <div id="blocks-controls"></div>
+      <div id="colorassign-controls"></div>
+    </section>
+
+    <section class="group">
+      <h2><span>02</span> PATTERN</h2>
+      <div id="presets" class="preset-grid"></div>
+    </section>
+
+    <section class="group" id="shape-section">
+      <h2><span>03</span> SHAPE</h2>
+      <div id="shape-controls"></div>
+    </section>
+
+    <section class="group">
+      <h2><span>04</span> DETAIL</h2>
+      <div id="detail-controls"></div>
+    </section>
+
+    <section class="group">
+      <h2><span>05</span> RENDER</h2>
+      <div id="render-controls"></div>
+    </section>
+
+    <section class="group">
+      <h2><span>06</span> EFFECTS</h2>
+      <div class="subhead">OUTLINE</div>
+      <div id="outline-controls"></div>
+      <div class="subhead">PIXELIZE</div>
+      <div id="pixelize-controls"></div>
+      <div class="subhead">SPOTS</div>
+      <div id="spots-controls"></div>
+      <div class="subhead">RAIN</div>
+      <div id="rain-controls"></div>
+      <div class="subhead">HEXAGONS</div>
+      <div id="hex-controls"></div>
+      <div class="subhead">MOTION BLUR</div>
+      <div id="motion-controls"></div>
+    </section>
+
+    <section class="group">
+      <h2><span>07</span> EDIT</h2>
+      <div class="subhead">COLOR</div>
+      <div id="editcolor-controls"></div>
+      <div class="subhead">EDGE</div>
+      <div id="editedge-controls"></div>
+    </section>
+
+    <section class="group">
+      <h2><span>08</span> PALETTE <button id="add-color" class="mini" title="Add colour">+</button></h2>
+      <div class="subhead">COLOR PALETTE</div>
+      <select id="palette-preset"></select>
+      <div id="palette"></div>
+    </section>
+
+    <section class="group actions">
+      <h2><span>09</span> EXPORT</h2>
+      <div class="btn-row">
+        <button id="reseed">RESEED</button>
+        <button id="randomize">RANDOM</button>
+      </div>
+      <div class="btn-row">
+        <button id="save-png" class="accent">PNG</button>
+        <button id="save-svg" class="accent">SVG</button>
+      </div>
+    </section>
+
+    <footer class="foot"><span>SEED</span><b id="seed-out">—</b></footer>
+  </aside>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud"><span id="hud-dims">—</span><span id="hud-status">READY</span></div>
+  </main>
+</div>
+
+<script>
+/* ============================================================================
+   ParaCloak v3.2 — dual-mode camouflage generator
+   ----------------------------------------------------------------------------
+   NOISE mode  : fbm noise field + palette quantization
+   POLYGON mode: 4 shape variants:
+       POLY     — recursive subdivision + colour bleed (camogen)
+       VORONOI  — weighted nearest-seed cells (gocamo marpat)
+       CELLULAR — low-res grid + majority-rule automata (gocamo blob)
+       BLOCKS   — rectangular grid + random neighbour merging (gocamo blocks)
+   ============================================================================ */
+
+/* ---------------- seeded Perlin noise ---------------- */
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function makePerlin(seed){
+  const rand = mulberry32(seed);
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 255; i > 0; i--){
+    const j = Math.floor(rand() * (i + 1));
+    const t = p[i]; p[i] = p[j]; p[j] = t;
+  }
+  const perm = new Uint8Array(512);
+  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+  const GX = [1,-1,1,-1,1,-1,0,0], GY = [1,1,-1,-1,0,0,1,-1];
+  function fade(t){ return t*t*t*(t*(t*6-15)+10); }
+  function lerp(a,b,t){ return a+t*(b-a); }
+  function grad(h,x,y){ h&=7; return GX[h]*x + GY[h]*y; }
+  return function(x,y){
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+    const xf = x - Math.floor(x), yf = y - Math.floor(y);
+    const u = fade(xf), v = fade(yf);
+    const aa = perm[perm[X]+Y], ab = perm[perm[X]+Y+1];
+    const ba = perm[perm[X+1]+Y], bb = perm[perm[X+1]+Y+1];
+    const x1 = lerp(grad(aa,xf,yf), grad(ba,xf-1,yf), u);
+    const x2 = lerp(grad(ab,xf,yf-1), grad(bb,xf-1,yf-1), u);
+    return (lerp(x1,x2,v) + 0.75) / 1.5;
+  };
+}
+function fbm(noise, x, y, octaves){
+  let amp=1, freq=1, sum=0, ampSum=0;
+  for (let i=0;i<octaves;i++){
+    sum += amp*noise(x*freq, y*freq);
+    ampSum += amp; amp*=0.5; freq*=2;
+  }
+  return ampSum>0 ? sum/ampSum : 0;
+}
+
+/* ---------------- pattern archetypes (noise mode) ---------------- */
+const PRESETS = {
+  blob:{ label:'BLOB',
+    scale:3.0, stretch:1.0, rotation:0, octaves:3, warp:0.55,
+    microScale:8, microStrength:0.18, contrast:2.1, grain:0.12, colorJitter:0.14,
+    digital:false, pixelSize:6, speckle:0.0, anisotropy:0.0, paletteName:'m81' },
+  stripe:{ label:'STRIPE',
+    scale:4.2, stretch:0.10, rotation:90, octaves:3, warp:0.45,
+    microScale:9, microStrength:0.14, contrast:3.6, grain:0.10, colorJitter:0.10,
+    digital:false, pixelSize:6, speckle:0.0, anisotropy:0.90, paletteName:'tigerStripe' },
+  splinter:{ label:'SPLINTER',
+    scale:5.5, stretch:1.0, rotation:0, octaves:4, warp:0.15,
+    microScale:6, microStrength:0.06, contrast:3.4, grain:0.04, colorJitter:0.06,
+    digital:false, pixelSize:6, speckle:0.0, anisotropy:0.0,
+    blobSmooth:0, edgeBlend:0, paletteName:'m90' },
+  digital:{ label:'DIGITAL',
+    scale:4.5, stretch:1.0, rotation:0, octaves:4, warp:0.35,
+    microScale:16, microStrength:0.06, contrast:3.2, grain:0.03, colorJitter:0.03,
+    digital:true, pixelSize:2, speckle:0.0, anisotropy:0.0,
+    blobSmooth:0, edgeBlend:0, paletteName:'marpatWood' },
+  spot:{ label:'SPOT',
+    scale:5.0, stretch:1.0, rotation:0, octaves:4, warp:0.5,
+    microScale:16, microStrength:0.32, contrast:2.4, grain:0.10, colorJitter:0.12,
+    digital:false, pixelSize:4, speckle:0.04, anisotropy:0.0, paletteName:'flecktarn' },
+  cloud:{ label:'CLOUD',
+    scale:2.4, stretch:1.0, rotation:0, octaves:2, warp:0.4,
+    microScale:6, microStrength:0.10, contrast:1.6, grain:0.08, colorJitter:0.10,
+    digital:false, pixelSize:6, speckle:0.0, anisotropy:0.0,
+    blobSmooth:4, edgeBlend:0.08, paletteName:'aTacsAU' },
+  leaf:{ label:'LEAF',
+    scale:3.8, stretch:0.7, rotation:30, octaves:3, warp:0.75,
+    microScale:10, microStrength:0.16, contrast:2.3, grain:0.10, colorJitter:0.12,
+    digital:false, pixelSize:6, speckle:0.0, anisotropy:0.35, paletteName:'dpm' },
+  dense:{ label:'DENSE',
+    scale:7.5, stretch:1.0, rotation:0, octaves:5, warp:0.45,
+    microScale:22, microStrength:0.28, contrast:2.5, grain:0.08, colorJitter:0.10,
+    digital:false, pixelSize:4, speckle:0.0, anisotropy:0.0, paletteName:'digitalFlora' }
+};
+
+/* ---------------- palettes (abbreviated to save space) ---------------- */
+const PALETTES = {
+  m81:{label:'M81 WOODLAND',palette:['#1a1a10','#2a2f1a','#3d4a22','#5c5a2e','#7a6a44'],weights:[10,15,25,30,20]},
+  multicam:{label:'MULTICAM',palette:['#48352f','#6f573f','#5a613f','#77775f','#967860','#b8a78b','#d8cdb4'],weights:[9,12,11,13,15,22,18]},
+  multicamTropic:{label:'MULTICAM TROPIC',palette:['#1f2415','#2d3a1a','#4a5a2a','#5c6b3a','#7a8a4a','#9a9a6a','#c2c29a'],weights:[9,12,16,18,16,15,14]},
+  marpatWood:{label:'MARPAT WOODLAND',palette:['#0d0d08','#1e2a12','#2d3a1a','#3d4a2a','#5c5a3a','#7a6a44','#a89878'],weights:[10,16,18,18,16,12,10]},
+  marpatDes:{label:'MARPAT DESERT',palette:['#2a2018','#4a3a28','#6a5a40','#8a7a52','#a89868','#c2b088','#ddd0b0'],weights:[10,14,18,20,18,12,8]},
+  dbdu:{label:'DBDU (CHOC CHIP)',palette:['#2a2a20','#4a3f2a','#6f5c3a','#8d7a4e','#a08655','#c2a878','#e8dfc8'],weights:[6,12,16,18,20,18,10]},
+  acu:{label:'ACU (UCP)',palette:['#6b7261','#8b9080','#acae9e','#c5c5b5','#d3d3c4'],weights:[18,24,24,20,14]},
+  dcub:{label:'AOR1 DESERT',palette:['#3a2e22','#5c4a32','#7a6244','#9a8060','#b8a080','#d4c0a0'],weights:[10,14,20,22,20,14]},
+  aor2:{label:'AOR2 WOODLAND',palette:['#1a2010','#2d3a1a','#3d4a2a','#5c5a3a','#7a6a44','#a89878'],weights:[14,20,22,20,16,8]},
+  us4ces:{label:'US4CES WOODLAND',palette:['#1a1a10','#2a2f1a','#3d4a22','#5c5a2e','#7a6a44','#a89868'],weights:[12,18,20,22,18,10]},
+  tigerStripe:{label:'TIGER STRIPE',palette:['#141410','#1a1a0e','#2d3a1a','#4e5a28','#7a7a45','#9c8f5e','#c2b189'],weights:[14,14,18,16,14,12,12]},
+  dpm:{label:'DPM WOODLAND',palette:['#14140c','#3a2a1a','#4a5a2e','#6b5a3a','#8a7a52'],weights:[14,18,26,22,20]},
+  flecktarn:{label:'FLECKTARN',palette:['#1a1a10','#3a3a20','#4a5a2e','#5c6b3a','#7a7a50','#8a5a3a'],weights:[10,12,30,22,14,16]},
+  tropentarn:{label:'TROPENTARN',palette:['#4a3a2a','#7a5a3a','#9a8a5a','#c2b088','#ddd0b0'],weights:[12,18,22,26,22]},
+  m90:{label:'M90 SPLINTER',palette:['#1a2a3a','#1a3a1a','#3a5a2a','#5a7a3a','#a8a080','#d8d0b8'],weights:[12,16,22,20,18,12]},
+  m90des:{label:'M90 DESERT',palette:['#3a2a1a','#5a4a2a','#7a6a3a','#9a8a5a','#c2b088','#e0d8c0'],weights:[10,14,18,22,22,14]},
+  vegetato:{label:'VEGETATO',palette:['#2a1a10','#4a2a1a','#6a4a2a','#7a7a4a','#9a9a6a','#b8b088'],weights:[10,14,18,22,20,16]},
+  cce:{label:'CCE FRENCH',palette:['#1a1a10','#3a2a1a','#4a3a2a','#5a5a3a','#7a7a5a','#9a9a7a'],weights:[12,18,20,20,18,12]},
+  m84:{label:'M84 DANISH',palette:['#1a1a10','#3a3a20','#5a5a3a','#7a7a5a','#9a9a7a','#b8b89a'],weights:[10,16,22,22,18,12]},
+  wz93:{label:'WZ.93 POLISH',palette:['#2a2a1a','#3d4a22','#5c5a2e','#7a6a44','#9a8a5a','#b8a878'],weights:[10,18,22,22,18,10]},
+  m93:{label:'M93 GREEK',palette:['#1a1a10','#2a3a1a','#4a5a2a','#6a7a3a','#8a8a5a','#a8a878'],weights:[14,18,22,20,16,10]},
+  cadpat:{label:'CADPAT TW',palette:['#35392C','#525D3A','#819359','#847B5B'],weights:[22,28,30,20]},
+  cadpatArid:{label:'CADPAT AR',palette:['#5a3a2a','#8a6a4a','#a88a6a','#c2a888','#ddd0b0'],weights:[14,20,24,24,18]},
+  dpcu:{label:'DPCU AUSCAM',palette:['#1a2a10','#3a4a1a','#5a6a2a','#7a6a3a','#9a7a4a','#b8a878'],weights:[12,16,18,20,20,14]},
+  tType07:{label:'TYPE 07 UNIVERSAL',palette:['#1a1a1a','#3a2a1a','#4a3a2a','#5a5a4a','#7a7a6a','#9a9a8a'],weights:[10,16,20,22,20,12]},
+  tType07Arid:{label:'TYPE 07 ARID',palette:['#2a1a10','#4a3a1a','#6a5a2a','#8a7a4a','#b8a878','#ddd0b0'],weights:[8,14,18,22,24,14]},
+  tType07Wood:{label:'TYPE 07 WOODLAND',palette:['#1a1a10','#2a3a1a','#4a5a2a','#6a7a3a','#8a8a4a','#b8a878'],weights:[10,18,22,22,16,12]},
+  jgsdf:{label:'JGSDF',palette:['#1a1a10','#3a2a1a','#4a5a2a','#7a6a3a','#9a8a5a','#c2b088'],weights:[10,16,20,22,20,12]},
+  digitalFlora:{label:'DIGITAL FLORA',palette:['#1a1a10','#3a2a1a','#4a3a2a','#5a6a3a','#7a8a4a','#a4ad9f'],weights:[10,16,20,22,18,14]},
+  korGranite:{label:'KOREA GRANITE',palette:['#2a2a20','#3a3a28','#4a5a2a','#6a6a4a','#8a8a6a','#a8a888'],weights:[12,16,22,22,18,10]},
+  s2000:{label:'S2000 SOLDIER',palette:['#1a2a10','#3a4a1a','#5a6a2a','#7a7a3a','#9a8a4a','#b8a878'],weights:[14,18,22,20,16,10]},
+  s2000Des:{label:'S2000 DESERT',palette:['#4a3a1a','#6a5a2a','#8a7a3a','#a8985a','#c2b088','#ddd0b0'],weights:[12,16,20,22,18,12]},
+  pencottGreen:{label:'PENCOTT GREENZONE',palette:['#2a2a20','#4a4a30','#5a6a3a','#7a7a4a','#9a9a6a','#b8b088'],weights:[14,18,24,22,14,8]},
+  pencottBad:{label:'PENCOTT BADLANDS',palette:['#3a2a1a','#5a3a2a','#7a5a3a','#9a7a4a','#b89868','#d8b888'],weights:[12,16,20,22,18,12]},
+  pencottSand:{label:'PENCOTT SANDSTORM',palette:['#6a5a3a','#8a7a4a','#a89858','#c2b088','#d8c8a8','#ece0c0'],weights:[14,20,22,20,14,10]},
+  aTacsAU:{label:'A-TACS AU',palette:['#4a4a3a','#6a6a5a','#8a8a7a','#a8a898','#c2c2b2','#d8d8c8'],weights:[12,18,22,22,16,10]},
+  aTacsFG:{label:'A-TACS FG',palette:['#2a3a1a','#3a4a2a','#4a5a3a','#6a7a4a','#8a9a6a','#a8b888'],weights:[12,18,22,22,16,10]},
+  kryptekHigh:{label:'KRYPTEK HIGHLANDER',palette:['#2a2a1a','#4a4a2a','#6a6a3a','#8a8a4a','#a8a86a','#c8c898'],weights:[14,18,22,20,16,10]},
+  kryptekMand:{label:'KRYPTEK MANDRAKE',palette:['#1a2a10','#2a3a1a','#3a5a2a','#5a6a3a','#7a8a4a','#9aaa6a'],weights:[14,18,22,22,14,10]},
+  snow:{label:'SNOW',palette:['#4a5258','#6e767d','#9aa3ab','#c8cfd4','#e8ecef'],weights:[4,10,18,30,38]},
+  snowArctic:{label:'ARCTIC WHITE',palette:['#6a7a8a','#8a9aaa','#a8b8c8','#c8d4dc','#e8eef2','#ffffff'],weights:[4,8,14,22,28,24]},
+  ocean:{label:'OCEAN',palette:['#0b2436','#12405a','#1c6180','#2e86a8','#7fb8cc'],weights:[16,22,24,22,16]},
+  oceanCoast:{label:'COASTAL',palette:['#1a3a4a','#2a5a6a','#4a7a8a','#6a9aaa','#9ac2d0'],weights:[14,18,22,24,22]},
+  urban:{label:'URBAN',palette:['#17171a','#33333a','#55555e','#7d7d86','#a9a9b0','#d0d0d4'],weights:[12,20,24,22,16,6]},
+  urbanLE:{label:'URBAN LE',palette:['#0a0a0f','#1a1a2a','#2a3a4a','#4a5a6a','#7a8a9a','#aab0b8'],weights:[14,18,22,22,16,8]},
+  black:{label:'BLACK / MONO',palette:['#000000','#1a1a1a','#333333','#555555','#888888','#cccccc'],weights:[10,15,20,22,20,13]},
+  red:{label:'RED / DESERT',palette:['#3a1a10','#5a2a1a','#7a3a2a','#9a5a3a','#b87a5a','#d8a88a'],weights:[10,14,18,22,22,14]},
+  denison:{label:'DENISON SMOCK',palette:['#2a1a10','#4a3a1a','#5a5a2a','#7a7a3a','#9a8a5a','#b8a878'],weights:[12,16,20,22,18,12]},
+  duckHunter:{label:'DUCK HUNTER',palette:['#3a2a1a','#5a3a2a','#7a5a3a','#9a7a4a','#b89868','#d8b888'],weights:[16,20,22,20,14,8]},
+  erdl:{label:'ERDL',palette:['#1a2a10','#2a3a1a','#3a4a22','#5a5a2e','#7a7a44','#9a8a5a'],weights:[12,18,22,22,16,10]},
+  splinterWWII:{label:'WWII SPLINTER',palette:['#1a1a10','#3a2a1a','#5a4a2a','#7a6a3a','#9a8a5a','#b8a878'],weights:[12,16,20,22,18,12]},
+  alpenflage:{label:'ALPENFLAGE',palette:['#1a1a10','#3a2a1a','#5a3a1a','#7a5a2a','#9a7a3a','#c22a2a','#e8d8b8'],weights:[12,16,16,18,16,10,12]},
+  neon:{label:'NEON',palette:['#0a0a1a','#1a0a3a','#2a0a6a','#4a1a8a','#7a3aaa','#b66aca','#e8a8e8'],weights:[10,12,14,16,16,16,16]},
+  sunset:{label:'SUNSET',palette:['#2a1a2a','#5a2a3a','#8a3a4a','#b85a3a','#d88a4a','#e8b86a','#f8e8a8'],weights:[10,14,18,20,18,12,8]}
+};
+
+/* ---------------- defaults ---------------- */
+const EDIT_DEFAULTS = {
+  hueShift:0, saturation:1.0, brightness:1.0, warmth:0, fade:0,
+  blobSmooth:0, edgeBlend:0
+};
+
+const POLY_DEFAULTS = {
+  mode:'noise',
+  polyShape:'polygon',
+  /* Polygon core */
+  polygonSize:200, maxDepth:8, polyRotation:0,
+  splitMin:0.40, splitMax:0.60, recurseOrder:'bfirst',
+  cornerSmooth:0, edgeNoise:0,
+  /* Voronoi */
+  voronoiPoints:250, voronoiRelax:0, voronoiWeight:0.5,
+  /* Cellular */
+  cellSize:8, cellIterations:3, cellThreshold:0.5, cellKeepProb:0.4,
+  /* Blocks */
+  blockSize:12, blockMergeProb:0.5, blockAspect:1.0,
+  /* Colour assignment */
+  colorBleed:3, bleedWeight:1.0, randomChance:0.05, colorBias:0.0,
+  /* Effects */
+  outlineWidth:0, outlineColor:'dark',
+  pixelAmount:0, pixelSampling:4, pixelDensityX:80, pixelDensityY:80,
+  spotsAmount:0, spotsRadiusMin:8, spotsRadiusMax:20, spotsSampling:6,
+  rainAmount:0, rainLength:20, rainAngle:70,
+  hexSize:0, hexOpacity:0.4,
+  motionLength:0, motionAngle:0, motionSamples:6
+};
+
+function hydrateParamsFromPreset(preset){
+  const p = Object.assign({}, preset);
+  const palName = p.paletteName;
+  if (palName && PALETTES[palName]){
+    p.palette = PALETTES[palName].palette.slice();
+    p.weights = PALETTES[palName].weights.slice();
+  }
+  delete p.paletteName;
+  delete p.label;
+  return p;
+}
+
+const params = Object.assign(
+  {seed:1234}, EDIT_DEFAULTS, POLY_DEFAULTS,
+  hydrateParamsFromPreset(PRESETS.blob)
+);
+
+let currentPreset = 'blob';
+
+/* ---------------- sliders ---------------- */
+const SLIDERS = [
+  /* Noise shape */
+  {key:'scale',label:'BLOB SIZE',min:0.5,max:12,step:0.1,group:'shape',modes:['noise']},
+  {key:'octaves',label:'ROUGH',min:1,max:6,step:1,group:'shape',modes:['noise']},
+  {key:'warp',label:'WARP',min:0,max:3,step:0.05,group:'shape',modes:['noise']},
+  {key:'stretch',label:'STRETCH',min:0.1,max:3,step:0.05,group:'shape',modes:['noise']},
+  {key:'rotation',label:'ANGLE',min:0,max:180,step:1,group:'shape',modes:['noise']},
+  {key:'anisotropy',label:'STRIPE',min:0,max:1,step:0.05,group:'shape',modes:['noise']},
+
+  /* Polygon core */
+  {key:'polygonSize',label:'POLY SIZE',min:40,max:600,step:5,group:'polygon',modes:['polygon'],shapes:['polygon']},
+  {key:'maxDepth',label:'DEPTH',min:1,max:12,step:1,group:'polygon',modes:['polygon'],shapes:['polygon']},
+  {key:'splitMin',label:'SPLIT MIN',min:0.2,max:0.5,step:0.01,group:'polygon',modes:['polygon'],shapes:['polygon']},
+  {key:'splitMax',label:'SPLIT MAX',min:0.5,max:0.8,step:0.01,group:'polygon',modes:['polygon'],shapes:['polygon']},
+  {key:'cornerSmooth',label:'SMOOTH',min:0,max:1,step:0.05,group:'polygon',modes:['polygon'],shapes:['polygon']},
+  {key:'edgeNoise',label:'JITTER',min:0,max:20,step:0.5,group:'polygon',modes:['polygon'],shapes:['polygon']},
+
+  /* Voronoi */
+  {key:'voronoiPoints',label:'POINTS',min:20,max:2000,step:10,group:'voronoi',modes:['polygon'],shapes:['voronoi']},
+  {key:'voronoiRelax',label:'RELAX',min:0,max:5,step:1,group:'voronoi',modes:['polygon'],shapes:['voronoi']},
+  {key:'voronoiWeight',label:'WEIGHT VAR',min:0,max:1,step:0.05,group:'voronoi',modes:['polygon'],shapes:['voronoi']},
+
+  /* Cellular */
+  {key:'cellSize',label:'CELL SIZE',min:2,max:32,step:1,group:'cellular',modes:['polygon'],shapes:['cellular']},
+  {key:'cellIterations',label:'ITERATIONS',min:0,max:10,step:1,group:'cellular',modes:['polygon'],shapes:['cellular']},
+  {key:'cellThreshold',label:'THRESHOLD',min:0.3,max:0.7,step:0.02,group:'cellular',modes:['polygon'],shapes:['cellular']},
+  {key:'cellKeepProb',label:'KEEP',min:0,max:1,step:0.05,group:'cellular',modes:['polygon'],shapes:['cellular']},
+
+  /* Blocks */
+  {key:'blockSize',label:'BLOCK SIZE',min:2,max:48,step:1,group:'blocks',modes:['polygon'],shapes:['blocks']},
+  {key:'blockMergeProb',label:'MERGE',min:0,max:1,step:0.05,group:'blocks',modes:['polygon'],shapes:['blocks']},
+  {key:'blockAspect',label:'ASPECT',min:0.5,max:2,step:0.05,group:'blocks',modes:['polygon'],shapes:['blocks']},
+
+  /* Colour assignment (shared) */
+  {key:'colorBleed',label:'BLEED',min:0,max:12,step:1,group:'colorassign',modes:['polygon']},
+  {key:'bleedWeight',label:'BLEED WT',min:0,max:1,step:0.05,group:'colorassign',modes:['polygon']},
+  {key:'randomChance',label:'RANDOM',min:0,max:0.5,step:0.01,group:'colorassign',modes:['polygon']},
+  {key:'colorBias',label:'BIAS',min:0,max:1,step:0.05,group:'colorassign',modes:['polygon']},
+  {key:'polyRotation',label:'ROTATE',min:0,max:360,step:1,group:'colorassign',modes:['polygon']},
+
+  /* Detail */
+  {key:'microScale',label:'MICRO FREQ',min:2,max:24,step:0.5,group:'detail',modes:['noise']},
+  {key:'microStrength',label:'MICRO AMT',min:0,max:0.6,step:0.01,group:'detail',modes:['noise']},
+  {key:'contrast',label:'CONTRAST',min:0.5,max:5,step:0.1,group:'detail',modes:['noise']},
+  {key:'grain',label:'GRAIN',min:0,max:0.5,step:0.01,group:'detail',modes:['noise']},
+  {key:'colorJitter',label:'JITTER',min:0,max:0.5,step:0.01,group:'detail',modes:['noise']},
+
+  /* Render */
+  {key:'pixelSize',label:'PIXEL',min:2,max:20,step:1,group:'render',modes:['noise']},
+  {key:'speckle',label:'SPECKLE',min:0,max:0.25,step:0.005,group:'render',modes:['noise']},
+
+  /* Outline */
+  {key:'outlineWidth',label:'WIDTH',min:0,max:10,step:0.5,group:'outline',modes:['polygon'],shapes:['polygon']},
+
+  /* Pixelize */
+  {key:'pixelAmount',label:'AMOUNT',min:0,max:1,step:0.02,group:'pixelize',modes:['polygon']},
+  {key:'pixelSampling',label:'SAMPLING',min:0,max:40,step:1,group:'pixelize',modes:['polygon']},
+  {key:'pixelDensityX',label:'DENS X',min:10,max:400,step:5,group:'pixelize',modes:['polygon']},
+  {key:'pixelDensityY',label:'DENS Y',min:10,max:400,step:5,group:'pixelize',modes:['polygon']},
+
+  /* Spots */
+  {key:'spotsAmount',label:'AMOUNT',min:0,max:5000,step:50,group:'spots',modes:['polygon']},
+  {key:'spotsRadiusMin',label:'R MIN',min:1,max:80,step:1,group:'spots',modes:['polygon']},
+  {key:'spotsRadiusMax',label:'R MAX',min:1,max:120,step:1,group:'spots',modes:['polygon']},
+  {key:'spotsSampling',label:'SAMPLE',min:0,max:40,step:1,group:'spots',modes:['polygon']},
+
+  /* Rain */
+  {key:'rainAmount',label:'AMOUNT',min:0,max:1000,step:20,group:'rain',modes:['polygon']},
+  {key:'rainLength',label:'LENGTH',min:4,max:120,step:2,group:'rain',modes:['polygon']},
+  {key:'rainAngle',label:'ANGLE',min:20,max:160,step:5,group:'rain',modes:['polygon']},
+
+  /* Hexagons */
+  {key:'hexSize',label:'SIZE',min:0,max:80,step:1,group:'hex',modes:['polygon']},
+  {key:'hexOpacity',label:'OPACITY',min:0,max:1,step:0.05,group:'hex',modes:['polygon']},
+
+  /* Motion blur */
+  {key:'motionLength',label:'LENGTH',min:0,max:60,step:1,group:'motion',modes:['polygon']},
+  {key:'motionAngle',label:'ANGLE',min:0,max:360,step:5,group:'motion',modes:['polygon']},
+  {key:'motionSamples',label:'SAMPLES',min:2,max:16,step:1,group:'motion',modes:['polygon']},
+
+  /* Edit colour */
+  {key:'hueShift',label:'HUE',min:-180,max:180,step:1,group:'editcolor'},
+  {key:'saturation',label:'SAT',min:0,max:2,step:0.05,group:'editcolor'},
+  {key:'brightness',label:'BRIGHT',min:0,max:2,step:0.05,group:'editcolor'},
+  {key:'warmth',label:'WARMTH',min:-1,max:1,step:0.05,group:'editcolor'},
+  {key:'fade',label:'FADE',min:0,max:1,step:0.02,group:'editcolor'},
+
+  /* Edit edge */
+  {key:'blobSmooth',label:'EDGE SOFT',min:0,max:9,step:0.25,group:'editedge',modes:['noise']},
+  {key:'edgeBlend',label:'EDGE MIX',min:0,max:0.15,step:0.005,group:'editedge'}
+];
+
+/* ---------------- state ---------------- */
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+const MAX_DIM = 820, ROWS_PER_CHUNK = 8;
+let W=0, H=0, ready=false, renderToken=0, exportToken=0;
+let indexGrid=null, gridW=0, gridH=0;
+let downloadsCap = null;
+const sliderEls = {};
+
+function $(id){ return document.getElementById(id); }
+
+function fitCanvas(){
+  const stage = $('stage');
+  if (!stage) return;
+  const rect = stage.getBoundingClientRect();
+  const avail = Math.min(rect.width, rect.height) - 48;
+  const size = Math.max(160, Math.min(MAX_DIM, Math.floor(avail)));
+  if (size === W && size === H) return;
+  W = H = size;
+  canvas.width = W; canvas.height = H;
+  updateHUD();
+}
+function updateHUD(){
+  const d = $('hud-dims'); if (d) d.textContent = W + '×' + H;
+  const s = $('seed-out'); if (s) s.textContent = params.seed;
+}
+function setStatus(txt, busy, error){
+  const el = $('hud-status'); const hud = $('hud');
+  if (el) el.textContent = txt;
+  if (hud){ hud.classList.toggle('busy', !!busy); hud.classList.toggle('error', !!error); }
+}
+
+/* ---------------- colour helpers ---------------- */
+function hexToRgb(hex){
+  const h = hex.replace('#','');
+  return [parseInt(h.substr(0,2),16), parseInt(h.substr(2,2),16), parseInt(h.substr(4,2),16)];
+}
+function clamp255(v){ return v<0?0:v>255?255:v; }
+function buildLUT(){
+  const total = params.weights.reduce((a,b)=>a+b,0) || 1;
+  const lut = []; let acc = 0;
+  for (let i=0;i<params.weights.length;i++){ acc += params.weights[i]/total; lut.push(acc); }
+  if (lut.length) lut[lut.length-1] = 1;
+  return lut;
+}
+function indexFor(v, lut){
+  let t = (v - 0.5) * params.contrast + 0.5;
+  t = t<0?0:t>1?1:t;
+  for (let i=0;i<lut.length;i++) if (t <= lut[i]) return i;
+  return lut.length-1;
+}
+function mixRgb(c1,c2,t){ return [c1[0]+(c2[0]-c1[0])*t, c1[1]+(c2[1]-c1[1])*t, c1[2]+(c2[2]-c1[2])*t]; }
+function paletteColorAt(t, lut, pal, i, soft){
+  if (soft<=0 || lut.length<2) return pal[i];
+  let bestDist=1e9, bestB=0;
+  for (let b=0;b<lut.length-1;b++){
+    const d = Math.abs(t-lut[b]);
+    if (d<bestDist){ bestDist=d; bestB=b; }
+  }
+  if (bestDist>=soft) return pal[i];
+  let blend = 0.5 + (t-lut[bestB])/(2*soft);
+  blend = blend<0?0:blend>1?1:blend;
+  return mixRgb(pal[bestB], pal[bestB+1], blend);
+}
+function rgbToHsl(r, g, b){
+  r/=255; g/=255; b/=255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max === min){ h = 0; s = 0; }
+  else {
+    const d = max-min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch (max){
+      case r: h = (g-b)/d + (g<b ? 6 : 0); break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hue2rgb(p, q, t){
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1/6) return p + (q-p)*6*t;
+  if (t < 1/2) return q;
+  if (t < 2/3) return p + (q-p)*(2/3-t)*6;
+  return p;
+}
+function hslToRgb(h, s, l){
+  let r, g, b;
+  if (s === 0){ r = g = b = l; }
+  else {
+    const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+}
+function boxBlur1D(src, w, h, r){
+  const tmp = new Float32Array(w*h), out = new Float32Array(w*h), win = 2*r+1;
+  for (let y=0;y<h;y++){
+    const rowOff=y*w; let sum=0;
+    for (let k=-r;k<=r;k++) sum += src[rowOff + Math.min(w-1,Math.max(0,k))];
+    for (let x=0;x<w;x++){
+      tmp[rowOff+x] = sum/win;
+      sum += src[rowOff+Math.min(w-1,x+r+1)] - src[rowOff+Math.max(0,x-r)];
+    }
+  }
+  for (let x=0;x<w;x++){
+    let sum=0;
+    for (let k=-r;k<=r;k++) sum += tmp[Math.min(h-1,Math.max(0,k))*w+x];
+    for (let y=0;y<h;y++){
+      out[y*w+x] = sum/win;
+      sum += tmp[Math.min(h-1,y+r+1)*w+x] - tmp[Math.max(0,y-r)*w+x];
+    }
+  }
+  return out;
+}
+function blurField(field, w, h, radius){
+  const r = Math.max(1, Math.round(radius));
+  return boxBlur1D(boxBlur1D(field, w, h, r), w, h, r);
+}
+
+/* ============================================================================
+   POLYGON SHAPE GENERATORS
+   ============================================================================ */
+function generatePolygons(w, h, rand){
+  const polygons = [];
+  const polygonSize = params.polygonSize;
+  const maxDepth = params.maxDepth;
+  const smin = Math.min(params.splitMin, params.splitMax);
+  const smax = Math.max(params.splitMin, params.splitMax);
+
+  function circum(poly){
+    let c = 0;
+    for (let i = 0; i < poly.length; i++){
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      c += Math.hypot(b.x - a.x, b.y - a.y);
+    }
+    return c;
+  }
+  function lerpPt(a, b, t){ return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
+
+  function split(poly, depth){
+    if (poly.length < 3 || depth <= 0 || circum(poly) < polygonSize){
+      polygons.push(poly); return;
+    }
+    const edges = [];
+    for (let i = 0; i < poly.length; i++){
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      edges.push({ key: i, dist: Math.hypot(b.x - a.x, b.y - a.y) });
+    }
+    edges.sort((A, B) => (B.dist - A.dist) || (B.key - A.key));
+    const ia = Math.min(edges[0].key, edges[1].key);
+    const ib = Math.max(edges[0].key, edges[1].key);
+    if (ia === ib){ polygons.push(poly); return; }
+
+    const va1 = poly[ia], va2 = poly[(ia + 1) % poly.length];
+    const vb1 = poly[ib], vb2 = poly[(ib + 1) % poly.length];
+    const na = lerpPt(va1, va2, smin + rand() * (smax - smin));
+    const nb = lerpPt(vb1, vb2, smin + rand() * (smax - smin));
+
+    const polyA = [];
+    for (let i = 0; i <= ia; i++) polyA.push(poly[i]);
+    polyA.push(na, nb);
+    for (let i = ib + 1; i < poly.length; i++) polyA.push(poly[i]);
+
+    const polyB = [];
+    for (let i = ia + 1; i <= ib; i++) polyB.push(poly[i]);
+    polyB.push(nb, na);
+
+    if (polyA.length < 3 || polyB.length < 3){ polygons.push(poly); return; }
+
+    if (params.recurseOrder === 'afirst'){ split(polyA, depth-1); split(polyB, depth-1); }
+    else if (params.recurseOrder === 'random'){
+      if (rand() < 0.5){ split(polyA, depth-1); split(polyB, depth-1); }
+      else { split(polyB, depth-1); split(polyA, depth-1); }
+    } else { split(polyB, depth-1); split(polyA, depth-1); }
+  }
+
+  const pad = 4;
+  const seed = [
+    { x: -pad, y: -pad }, { x: w + pad, y: -pad },
+    { x: w + pad, y: h + pad }, { x: -pad, y: h + pad }
+  ];
+  split(seed, maxDepth);
+
+  if (params.cornerSmooth > 0){
+    for (let i = 0; i < polygons.length; i++){
+      const poly = polygons[i];
+      if (poly.length < 4) continue;
+      const np = [];
+      for (let j = 0; j < poly.length; j++){
+        const a = poly[j], b = poly[(j + 1) % poly.length];
+        const k = params.cornerSmooth * 0.25;
+        np.push({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
+        np.push({ x: a.x + (b.x - a.x) * (1 - k), y: a.y + (b.y - a.y) * (1 - k) });
+      }
+      polygons[i] = np;
+    }
+  }
+  if (params.edgeNoise > 0){
+    for (const poly of polygons){
+      for (const v of poly){
+        v.x += (rand() * 2 - 1) * params.edgeNoise;
+        v.y += (rand() * 2 - 1) * params.edgeNoise;
+      }
+    }
+  }
+  return polygons;
+}
+
+function pointInPoly(x, y, poly){
+  let inside = false;
+  const n = poly.length;
+  for (let i = 0, j = n - 1; i < n; j = i++){
+    const xi = poly[i].x, yi = poly[i].y;
+    const xj = poly[j].x, yj = poly[j].y;
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)){
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function rasterizePolygons(polygons, w, h){
+  const idGrid = new Int32Array(w * h).fill(-1);
+  for (let i = 0; i < polygons.length; i++){
+    const poly = polygons[i];
+    let minX = w, minY = h, maxX = 0, maxY = 0;
+    for (const v of poly){
+      if (v.x < minX) minX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y > maxY) maxY = v.y;
+    }
+    minX = Math.max(0, Math.floor(minX));
+    minY = Math.max(0, Math.floor(minY));
+    maxX = Math.min(w - 1, Math.ceil(maxX));
+    maxY = Math.min(h - 1, Math.ceil(maxY));
+    for (let y = minY; y <= maxY; y++){
+      const yo = y * w;
+      for (let x = minX; x <= maxX; x++){
+        if (idGrid[yo + x] !== -1) continue;
+        if (pointInPoly(x + 0.5, y + 0.5, poly)) idGrid[yo + x] = i;
+      }
+    }
+  }
+  return idGrid;
+}
+
+function rasterizeVoronoi(w, h, rand){
+  const count = Math.max(4, Math.round(params.voronoiPoints));
+  const pts = [];
+  for (let i = 0; i < count; i++){
+    pts.push({ x: rand()*w, y: rand()*h, weight: 1 });
+  }
+  const relax = Math.round(params.voronoiRelax);
+  if (relax > 0){
+    const sampleW = 80, sampleH = 80;
+    const cw = w / sampleW, ch = h / sampleH;
+    for (let it = 0; it < relax; it++){
+      const sumX = new Float64Array(count), sumY = new Float64Array(count);
+      const cnt = new Int32Array(count);
+      for (let j = 0; j < sampleH; j++){
+        const py = j * ch + ch*0.5;
+        for (let i = 0; i < sampleW; i++){
+          const px = i * cw + cw*0.5;
+          let best = -1, bestD = 1e18;
+          for (let k = 0; k < count; k++){
+            const dx = px - pts[k].x, dy = py - pts[k].y;
+            const d = (dx*dx + dy*dy) / (pts[k].weight * pts[k].weight);
+            if (d < bestD){ bestD = d; best = k; }
+          }
+          if (best >= 0){ sumX[best] += px; sumY[best] += py; cnt[best]++; }
+        }
+      }
+      for (let k = 0; k < count; k++){
+        if (cnt[k] > 0){ pts[k].x = sumX[k]/cnt[k]; pts[k].y = sumY[k]/cnt[k]; }
+      }
+    }
+  }
+  const wv = params.voronoiWeight;
+  if (wv > 0){
+    for (const p of pts){
+      p.weight = Math.max(0.2, 1 + (rand()*2-1) * wv * 0.7);
+    }
+  }
+  const idGrid = new Int32Array(w * h);
+  for (let y = 0; y < h; y++){
+    for (let x = 0; x < w; x++){
+      let best = -1, bestD = 1e18;
+      for (let k = 0; k < count; k++){
+        const dx = x - pts[k].x, dy = y - pts[k].y;
+        const d = (dx*dx + dy*dy) / (pts[k].weight * pts[k].weight);
+        if (d < bestD){ bestD = d; best = k; }
+      }
+      idGrid[y*w + x] = best < 0 ? 0 : best;
+    }
+  }
+  return { idGrid, numCells: count };
+}
+
+function rasterizeCellular(w, h, rand, nColors){
+  const cs = Math.max(2, Math.round(params.cellSize));
+  const gw = Math.ceil(w / cs), gh = Math.ceil(h / cs);
+  let grid = new Int32Array(gw * gh);
+  for (let i = 0; i < grid.length; i++) grid[i] = Math.floor(rand() * nColors);
+
+  const iters = Math.round(params.cellIterations);
+  const thresh = params.cellThreshold;
+  const keep = params.cellKeepProb;
+
+  for (let it = 0; it < iters; it++){
+    const next = new Int32Array(grid);
+    for (let y = 0; y < gh; y++){
+      for (let x = 0; x < gw; x++){
+        const idx = y * gw + x;
+        if (rand() < keep) continue;
+        const counts = new Int32Array(nColors);
+        for (let dy = -1; dy <= 1; dy++){
+          for (let dx = -1; dx <= 1; dx++){
+            if (dx === 0 && dy === 0) continue;
+            const nx = (x + dx + gw) % gw;
+            const ny = (y + dy + gh) % gh;
+            counts[grid[ny*gw + nx]]++;
+          }
+        }
+        let best = 0, bestCount = -1;
+        for (let c = 0; c < nColors; c++){
+          if (counts[c] > bestCount){ bestCount = counts[c]; best = c; }
+        }
+        if (bestCount / 8 >= thresh) next[idx] = best;
+      }
+    }
+    grid = next;
+  }
+
+  const idGrid = new Int32Array(w * h);
+  for (let y = 0; y < h; y++){
+    const gy = Math.min(gh-1, Math.floor(y / cs));
+    for (let x = 0; x < w; x++){
+      const gx = Math.min(gw-1, Math.floor(x / cs));
+      idGrid[y*w + x] = gy * gw + gx;
+    }
+  }
+  return { idGrid, numCells: gw * gh };
+}
+
+function rasterizeBlocks(w, h, rand){
+  const bw = Math.max(2, Math.round(params.blockSize * params.blockAspect));
+  const bh = Math.max(2, Math.round(params.blockSize / Math.max(0.01, params.blockAspect)));
+  const gw = Math.ceil(w / bw), gh = Math.ceil(h / bh);
+  const blockId = new Int32Array(gw * gh);
+  for (let i = 0; i < blockId.length; i++) blockId[i] = i;
+
+  const merge = params.blockMergeProb;
+  if (merge > 0){
+    for (let y = 0; y < gh; y++){
+      for (let x = 0; x < gw; x++){
+        if (rand() < merge){
+          const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+          const [dx, dy] = dirs[Math.floor(rand()*4)];
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < gw && ny >= 0 && ny < gh){
+            blockId[y*gw + x] = blockId[ny*gw + nx];
+          }
+        }
+      }
+    }
+  }
+
+  const idGrid = new Int32Array(w * h);
+  let maxId = 0;
+  for (let y = 0; y < h; y++){
+    const gy = Math.min(gh-1, Math.floor(y / bh));
+    for (let x = 0; x < w; x++){
+      const gx = Math.min(gw-1, Math.floor(x / bw));
+      const id = blockId[gy*gw + gx];
+      idGrid[y*w + x] = id;
+      if (id > maxId) maxId = id;
+    }
+  }
+  return { idGrid, numCells: maxId + 1 };
+}
+
+function buildAdjacency(idGrid, w, h){
+  const adj = new Map();
+  function ensure(id){
+    let s = adj.get(id);
+    if (!s){ s = new Set(); adj.set(id, s); }
+    return s;
+  }
+  for (let y = 0; y < h; y++){
+    const yo = y * w;
+    for (let x = 0; x < w; x++){
+      const a = idGrid[yo + x];
+      if (a < 0) continue;
+      if (x + 1 < w){
+        const b = idGrid[yo + x + 1];
+        if (b >= 0 && b !== a){ ensure(a).add(b); ensure(b).add(a); }
+      }
+      if (y + 1 < h){
+        const b = idGrid[yo + x + w];
+        if (b >= 0 && b !== a){ ensure(a).add(b); ensure(b).add(a); }
+      }
+    }
+  }
+  return adj;
+}
+
+function colorWithBleed(numCells, adj, lut, rand){
+  const assignment = new Int32Array(numCells).fill(-1);
+  const bleedWeight = params.bleedWeight;
+  const randomChance = params.randomChance;
+  const colorBias = params.colorBias;
+  const bleedDepth = Math.round(params.colorBleed);
+
+  function pickColor(){
+    let r = rand();
+    if (colorBias > 0) r = Math.pow(r, 1 + colorBias * 3);
+    for (let i = 0; i < lut.length; i++) if (r <= lut[i]) return i;
+    return lut.length - 1;
+  }
+  function countSame(idx, color){
+    const s = adj.get(idx);
+    if (!s) return 0;
+    let c = 0;
+    for (const n of s) if (assignment[n] === color) c++;
+    return c;
+  }
+  function bleed(idx, color, depth){
+    assignment[idx] = color;
+    if (depth <= 0) return;
+    if (rand() < randomChance) return;
+    const s = adj.get(idx);
+    if (!s) return;
+    const candidates = [];
+    for (const n of s) if (assignment[n] === -1) candidates.push(n);
+    if (!candidates.length) return;
+    let best = candidates[0], bestScore = -1e9;
+    for (const c of candidates){
+      const same = countSame(c, color);
+      const jitter = (rand() - 0.5) * (1 - bleedWeight) * 8;
+      const score = bleedWeight * same + jitter;
+      if (score > bestScore){ bestScore = score; best = c; }
+    }
+    bleed(best, color, depth - 1);
+  }
+
+  for (let i = 0; i < numCells; i++){
+    if (assignment[i] === -1) bleed(i, pickColor(), bleedDepth);
+  }
+  return assignment;
+}
+
+/* ============================================================================
+   RENDER
+   ============================================================================ */
+function renderPattern(){
+  if (!ready || !W || !H || params.palette.length === 0) return;
+  const myToken = ++renderToken;
+  setStatus('RENDER', true);
+
+  try {
+    const palRaw = params.palette.map(hexToRgb);
+    const hueShiftRad = params.hueShift / 360;
+    const pal = (params.hueShift === 0)
+      ? palRaw
+      : palRaw.map(rgb => {
+          const [h,s,l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+          return hslToRgb((h + hueShiftRad + 1) % 1, s, l);
+        });
+    const lut = buildLUT();
+
+    if (params.mode === 'polygon'){
+      renderPolygonMode(pal, lut, myToken);
+    } else {
+      renderNoiseMode(pal, lut, myToken);
+    }
+  } catch (e){
+    console.error(e);
+    setStatus('ERROR: ' + e.message, false, true);
+  }
+}
+
+function renderNoiseMode(pal, lut, myToken){
+  const noise = makePerlin(params.seed);
+  const n = pal.length;
+  const speckle = params.speckle, digital = params.digital;
+  const ps = Math.max(1, Math.round(params.pixelSize));
+  const jitter = params.colorJitter, grain = params.grain;
+  const sat = params.saturation, bright = params.brightness;
+  const warmth = params.warmth, fade = params.fade;
+  const applyGrade = (sat !== 1 || bright !== 1 || warmth !== 0 || fade !== 0);
+
+  const rad = params.rotation * Math.PI/180, cs = Math.cos(rad), sn = Math.sin(rad);
+  const s = params.scale * 0.0012;
+  const ms = s * params.microScale;
+  const ws = s * 3.0;
+  const microAmt = params.microStrength, warpAmt = params.warp;
+  const aniso = params.anisotropy;
+
+  function stripeCoords(rx, ry){
+    if (aniso <= 0) return [rx, ry];
+    return [rx, ry * (1 + aniso * 7)];
+  }
+  function field(x,y){
+    const rx = x*cs - y*sn, ry = x*sn + y*cs;
+    const [sx, sy] = stripeCoords(rx, ry);
+    let px = sx*s, py = sy*s*params.stretch;
+    if (warpAmt > 0){
+      const wx = fbm(noise, sx*ws+13.7, sy*ws+4.2, 3) - 0.5;
+      const wy = fbm(noise, sx*ws+61.1, sy*ws+27.9, 3) - 0.5;
+      const k = warpAmt * 2.5;
+      px += wx*k; py += wy*k;
+    }
+    let v = fbm(noise, px, py, params.octaves);
+    if (microAmt > 0){
+      const mv = fbm(noise, sx*ms+91.3, sy*ms+51.7, 2) - 0.5;
+      v += mv * microAmt;
+    }
+    return v;
+  }
+
+  const blobSmooth = params.blobSmooth;
+  const fieldBuf = new Float32Array(W*H);
+  const imgData = ctx.createImageData(W,H);
+  const px = imgData.data;
+  indexGrid = new Uint8Array(W*H); gridW = W; gridH = H;
+  let y0 = 0;
+
+  function stepField(){
+    if (renderToken !== myToken) return;
+    const y1 = Math.min(y0 + ROWS_PER_CHUNK, H);
+    for (let y=y0; y<y1; y++){
+      const rowOff = y*W;
+      for (let x=0; x<W; x++){
+        fieldBuf[rowOff+x] = digital
+          ? field(Math.floor(x/ps)*ps+ps*0.5, Math.floor(y/ps)*ps+ps*0.5)
+          : field(x, y);
+      }
+    }
+    y0 = y1;
+    if (y0 < H) requestAnimationFrame(stepField);
+    else { y0 = 0; requestAnimationFrame(afterField); }
+  }
+  function afterField(){
+    if (renderToken !== myToken) return;
+    const smoothed = blobSmooth>0 ? blurField(fieldBuf, W, H, blobSmooth) : fieldBuf;
+    stepColor(smoothed);
+  }
+  function stepColor(fld){
+    if (renderToken !== myToken) return;
+    const y1 = Math.min(y0 + ROWS_PER_CHUNK, H);
+    for (let y=y0; y<y1; y++){
+      const rowOff = y*W;
+      for (let x=0; x<W; x++){
+        const v = fld[rowOff+x];
+        const t = Math.max(0, Math.min(1, (v-0.5)*params.contrast+0.5));
+        let idx = indexFor(v, lut);
+        let c = paletteColorAt(t, lut, pal, idx, params.edgeBlend);
+        if (speckle > 0 && noise(x*0.9+777, y*0.9+777) > 1-speckle){
+          let sp = Math.floor(noise(x*1.7+311, y*1.7+311)*n);
+          idx = sp<0?0:sp>=n?n-1:sp; c = pal[idx];
+        }
+        indexGrid[rowOff+x] = idx;
+        let r=c[0], g=c[1], b=c[2];
+        if (applyGrade){
+          if (bright !== 1){ r*=bright; g*=bright; b*=bright; }
+          if (sat !== 1){
+            const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+            r = lum + (r-lum)*sat; g = lum + (g-lum)*sat; b = lum + (b-lum)*sat;
+          }
+          if (warmth !== 0){ r += warmth*25; b -= warmth*25; }
+          if (fade > 0){ r += (128-r)*fade; g += (128-g)*fade; b += (128-b)*fade; }
+        }
+        if (jitter > 0){
+          const j = (noise(x*0.06+idx*17.3, y*0.06+idx*7.1) - 0.5) * 2 * jitter * 46;
+          r=clamp255(r+j); g=clamp255(g+j); b=clamp255(b+j);
+        }
+        if (grain > 0){
+          const gr = (noise(x*2.3+401, y*2.3+401) - 0.5) * 2 * grain * 55;
+          r=clamp255(r+gr); g=clamp255(g+gr); b=clamp255(b+gr);
+        }
+        const o = (rowOff+x)*4;
+        px[o]=clamp255(r); px[o+1]=clamp255(g); px[o+2]=clamp255(b); px[o+3]=255;
+      }
+    }
+    y0 = y1;
+    if (y0 < H) requestAnimationFrame(()=>stepColor(fld));
+    else {
+      if (renderToken !== myToken) return;
+      ctx.putImageData(imgData, 0, 0);
+      applyPostProcess(pal);
+      finishRender();
+    }
+  }
+  requestAnimationFrame(stepField);
+}
+
+function renderPolygonMode(pal, lut, myToken){
+  const rand = mulberry32(params.seed);
+  const n = pal.length;
+
+  let idGrid, numCells;
+  let polygons = null;
+
+  if (params.polyShape === 'polygon'){
+    polygons = generatePolygons(W, H, rand);
+    idGrid = rasterizePolygons(polygons, W, H);
+    numCells = polygons.length;
+  } else if (params.polyShape === 'voronoi'){
+    const res = rasterizeVoronoi(W, H, rand);
+    idGrid = res.idGrid; numCells = res.numCells;
+  } else if (params.polyShape === 'cellular'){
+    const res = rasterizeCellular(W, H, rand, n);
+    idGrid = res.idGrid; numCells = res.numCells;
+  } else {
+    const res = rasterizeBlocks(W, H, rand);
+    idGrid = res.idGrid; numCells = res.numCells;
+  }
+
+  if (renderToken !== myToken) return;
+  const adj = buildAdjacency(idGrid, W, H);
+  const assignment = colorWithBleed(numCells, adj, lut, rand);
+  if (renderToken !== myToken) return;
+
+  const sat = params.saturation, bright = params.brightness;
+  const warmth = params.warmth, fade = params.fade;
+  const applyGrade = (sat !== 1 || bright !== 1 || warmth !== 0 || fade !== 0);
+  function gradeColor(c){
+    let r = c[0], g = c[1], b = c[2];
+    if (!applyGrade) return [r,g,b];
+    if (bright !== 1){ r*=bright; g*=bright; b*=bright; }
+    if (sat !== 1){
+      const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+      r = lum + (r-lum)*sat; g = lum + (g-lum)*sat; b = lum + (b-lum)*sat;
+    }
+    if (warmth !== 0){ r += warmth*25; b -= warmth*25; }
+    if (fade > 0){ r += (128-r)*fade; g += (128-g)*fade; b += (128-b)*fade; }
+    return [clamp255(r), clamp255(g), clamp255(b)];
+  }
+  const gradedPal = pal.map(gradeColor);
+
+  if (params.polyShape === 'polygon' && polygons){
+    ctx.save();
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    const rad = params.polyRotation * Math.PI/180;
+    const cs = Math.cos(rad), sn = Math.sin(rad);
+    const cx = W/2, cy = H/2;
+    for (let i = 0; i < polygons.length; i++){
+      const poly = polygons[i];
+      const colorIdx = assignment[i];
+      if (colorIdx < 0) continue;
+      const c = gradedPal[colorIdx];
+      ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+      ctx.beginPath();
+      for (let v = 0; v < poly.length; v++){
+        const vx = poly[v].x - cx, vy = poly[v].y - cy;
+        const rx = vx*cs - vy*sn + cx;
+        const ry = vx*sn + vy*cs + cy;
+        if (v === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
+      }
+      ctx.closePath();
+      ctx.fill();
+      if (params.outlineWidth > 0){
+        const oc = (params.outlineColor === 'light') ? pal[pal.length-1] : pal[0];
+        ctx.strokeStyle = 'rgb(' + oc[0] + ',' + oc[1] + ',' + oc[2] + ')';
+        ctx.lineWidth = params.outlineWidth;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    const imgData = ctx.getImageData(0, 0, W, H);
+    indexGrid = new Uint8Array(W*H); gridW = W; gridH = H;
+    const keyMap = new Map();
+    for (let i = 0; i < params.palette.length; i++){
+      const c = pal[i];
+      keyMap.set(c[0] + ',' + c[1] + ',' + c[2], i);
+    }
+    const pdata = imgData.data;
+    for (let i = 0; i < W*H; i++){
+      const o = i*4;
+      const k = pdata[o] + ',' + pdata[o+1] + ',' + pdata[o+2];
+      const idx = keyMap.get(k);
+      indexGrid[i] = (idx === undefined) ? 0 : idx;
+    }
+  } else {
+    const imgData = ctx.createImageData(W, H);
+    const px = imgData.data;
+    indexGrid = new Uint8Array(W*H); gridW = W; gridH = H;
+    for (let i = 0; i < W*H; i++){
+      const cellId = idGrid[i];
+      const ci = (cellId >= 0 && cellId < numCells) ? assignment[cellId] : 0;
+      const safeCi = ci < 0 ? 0 : ci;
+      indexGrid[i] = safeCi;
+      const c = gradedPal[safeCi];
+      const o = i*4;
+      px[o]=c[0]; px[o+1]=c[1]; px[o+2]=c[2]; px[o+3]=255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  applyPostProcess(pal);
+  finishRender();
+}
+
+/* ---------------- post-processing effects ---------------- */
+function applyPostProcess(pal){
+  const rand = mulberry32((params.seed * 2654435761) >>> 0);
+  try {
+    if (params.pixelAmount > 0) applyPixelize(rand);
+    if (params.hexSize > 0) drawHexagons(pal, rand);
+    if (params.spotsAmount > 0) drawSpots(rand);
+    if (params.rainAmount > 0) drawRain(pal, rand);
+    if (params.motionLength > 0) applyMotionBlur();
+  } catch(e){
+    console.warn('post-process error', e);
+  }
+}
+
+function applyPixelize(rand){
+  const amount = params.pixelAmount;
+  const sampling = params.pixelSampling;
+  const dx = Math.max(1, Math.round(W / params.pixelDensityX));
+  const dy = Math.max(1, Math.round(H / params.pixelDensityY));
+  const imgData = ctx.getImageData(0, 0, W, H);
+  const data = imgData.data;
+  for (let y = 0; y < H; y += dy){
+    for (let x = 0; x < W; x += dx){
+      if (rand() > amount) continue;
+      const sx = Math.max(0, Math.min(W-1, x + Math.floor((rand()*2-1)*sampling)));
+      const sy = Math.max(0, Math.min(H-1, y + Math.floor((rand()*2-1)*sampling)));
+      const o = (sy*W + sx) * 4;
+      const c = [data[o], data[o+1], data[o+2]];
+      for (let by = 0; by < dy && y+by < H; by++){
+        for (let bx = 0; bx < dx && x+bx < W; bx++){
+          const oo = ((y+by)*W + (x+bx)) * 4;
+          data[oo] = c[0]; data[oo+1] = c[1]; data[oo+2] = c[2];
+        }
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function drawHexagons(pal, rand){
+  const hs = params.hexSize;
+  const halfH = hs / 2;
+  const halfW = halfH;
+  const angleLen = Math.round(halfH * 0.5);
+  const colSpacing = halfW + halfW;
+  const rowSpacing = angleLen + angleLen;
+  ctx.save();
+  ctx.globalAlpha = params.hexOpacity;
+  for (let y = -rowSpacing; y < H + rowSpacing; y += rowSpacing){
+    const colOffset = (Math.floor(y / rowSpacing) % 2) ? halfW : 0;
+    for (let x = -colSpacing; x < W + colSpacing; x += colSpacing){
+      const x1 = x + colOffset;
+      const x2 = x1 + halfW;
+      const x3 = x1 + colSpacing;
+      const y1 = y;
+      const pts = [
+        [x1, y1 - angleLen], [x1, y1 + angleLen],
+        [x2, y1 + angleLen + angleLen], [x3, y1 + angleLen],
+        [x3, y1 - angleLen], [x2, y1 - angleLen - angleLen]
+      ];
+      const c = pal[Math.floor(rand() * pal.length)];
+      ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawSpots(rand){
+  const imgData = ctx.getImageData(0, 0, W, H);
+  const data = imgData.data;
+  const amount = Math.round(params.spotsAmount);
+  const rMin = Math.max(1, Math.round(params.spotsRadiusMin / 2));
+  const rMax = Math.max(rMin, Math.round(params.spotsRadiusMax / 2));
+  const sampling = params.spotsSampling;
+  for (let k = 0; k < amount; k++){
+    const r = rMin + Math.floor(rand() * (rMax - rMin + 1));
+    const sx = r + Math.floor(rand() * Math.max(1, W - r*2));
+    const sy = r + Math.floor(rand() * Math.max(1, H - r*2));
+    const offsetX = Math.floor((rand() * 2 - 1) * sampling);
+    const offsetY = Math.floor((rand() * 2 - 1) * sampling);
+    const px = Math.max(0, Math.min(W - 1, sx + offsetX));
+    const py = Math.max(0, Math.min(H - 1, sy + offsetY));
+    const o = (py * W + px) * 4;
+    const c = [data[o], data[o+1], data[o+2]];
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+    ctx.fill();
+  }
+}
+
+function drawRain(pal, rand){
+  const amount = Math.round(params.rainAmount);
+  const length = params.rainLength;
+  const angleRad = params.rainAngle * Math.PI / 180;
+  const dx = Math.cos(angleRad) * length;
+  const dy = Math.sin(angleRad) * length;
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.lineCap = 'round';
+  for (let k = 0; k < amount; k++){
+    const x = rand() * W;
+    const y = rand() * H;
+    const c = pal[Math.floor(rand() * pal.length)];
+    ctx.strokeStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+    ctx.lineWidth = 0.5 + rand() * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + dx, y + dy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function applyMotionBlur(){
+  const length = params.motionLength;
+  const samples = Math.max(2, Math.round(params.motionSamples));
+  const rad = params.motionAngle * Math.PI / 180;
+  const dx = Math.cos(rad) * length / samples;
+  const dy = Math.sin(rad) * length / samples;
+  const snap = document.createElement('canvas');
+  snap.width = W; snap.height = H;
+  snap.getContext('2d').drawImage(canvas, 0, 0);
+  ctx.save();
+  ctx.globalAlpha = 1 / samples;
+  const half = Math.floor(samples / 2);
+  for (let i = -half; i <= half; i++){
+    ctx.drawImage(snap, i * dx, i * dy);
+  }
+  ctx.restore();
+}
+
+function finishRender(){
+  updateHUD();
+  setStatus('READY');
+}
+
+/* ---------------- download / export ---------------- */
+function downloadBlobFallback(filename, blob){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+function saveFile(filename, blob){
+  if (downloadsCap){
+    return downloadsCap.save({filename, data:blob}).catch(()=>downloadBlobFallback(filename, blob));
+  }
+  downloadBlobFallback(filename, blob);
+  return Promise.resolve();
+}
+function exportSVG(){
+  if (!indexGrid) return;
+  setStatus('SVG...', true);
+  const myToken = ++exportToken;
+  const w = gridW, h = gridH;
+  const S = Math.max(1, Math.ceil(w / 220));
+  const gw = Math.max(1, Math.floor(w/S)), gh = Math.max(1, Math.floor(h/S));
+  const n = params.palette.length;
+  const grid = new Uint8Array(gw*gh);
+  for (let j=0;j<gh;j++){
+    const sy = Math.min(h-1, j*S + (S>>1));
+    const rowOff = sy*w, gridOff = j*gw;
+    for (let i=0;i<gw;i++){
+      const sx = Math.min(w-1, i*S + (S>>1));
+      grid[gridOff+i] = indexGrid[rowOff+sx];
+    }
+  }
+  const rects = new Array(n);
+  for (let i=0;i<n;i++) rects[i]=[];
+  for (let j=0;j<gh;j++){
+    const gridOff = j*gw;
+    let runStart=0, runColor=grid[gridOff];
+    for (let i=1;i<=gw;i++){
+      const c = (i<gw)?grid[gridOff+i]:-1;
+      if (c !== runColor){
+        const x0=runStart*S, x1=Math.min(w,i*S), y0=j*S, y1=Math.min(h,y0+S);
+        rects[runColor].push('<rect x="'+x0+'" y="'+y0+'" width="'+(x1-x0)+'" height="'+(y1-y0)+'"/>');
+        runStart=i; runColor=c;
+      }
+    }
+  }
+  let body = '<rect width="'+w+'" height="'+h+'" fill="'+params.palette[n-1]+'"/>\n';
+  for (let i=0;i<n;i++){
+    if (!rects[i].length) continue;
+    body += '<g fill="'+params.palette[i]+'">\n'+rects[i].join('\n')+'\n</g>\n';
+  }
+  const svg = '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" shape-rendering="crispEdges">\n'+body+'</svg>\n';
+  const blob = new Blob([svg], {type:'image/svg+xml'});
+  saveFile('paracloak_'+params.seed+'.svg', blob)
+    .finally(()=>{ if (exportToken===myToken) setStatus('READY'); });
+}
+function exportPNG(){
+  setStatus('PNG...', true);
+  canvas.toBlob(blob=>{
+    if (!blob){ setStatus('READY'); return; }
+    saveFile('paracloak_'+params.seed+'.png', blob).finally(()=>setStatus('READY'));
+  }, 'image/png');
+}
+
+/* ---------------- debounce ---------------- */
+function debounce(fn, ms){
+  let t=null;
+  return function(){ if (t) clearTimeout(t); t=setTimeout(()=>{t=null; fn();}, ms); };
+}
+const scheduleRender = debounce(renderPattern, 100);
+const scheduleResize = debounce(()=>{ fitCanvas(); renderPattern(); }, 200);
+
+/* ---------------- UI ---------------- */
+function buildPresetGrid(){
+  const host = $('presets'); if (!host) return;
+  host.innerHTML = '';
+  Object.keys(PRESETS).forEach(key=>{
+    const b = document.createElement('button');
+    b.dataset.preset = key; b.textContent = PRESETS[key].label;
+    b.addEventListener('click', ()=>applyPreset(key));
+    host.appendChild(b);
+  });
+  const custom = document.createElement('button');
+  custom.dataset.preset = 'custom'; custom.textContent = 'CUSTOM'; custom.disabled = true;
+  host.appendChild(custom);
+}
+function highlightPreset(name){
+  document.querySelectorAll('#presets button').forEach(b => b.classList.toggle('on', b.dataset.preset === name));
+}
+
+function buildModeRow(){
+  const modeHost = $('mode-row');
+  if (modeHost){
+    modeHost.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        params.mode = b.dataset.mode;
+        markCustom(); syncModeButtons(); updateVisibility(); scheduleRender();
+      });
+    });
+  }
+  const shapeHost = $('polyshape-row');
+  if (shapeHost){
+    shapeHost.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        params.polyShape = b.dataset.shape;
+        markCustom(); syncModeButtons(); updateVisibility(); scheduleRender();
+      });
+    });
+  }
+}
+
+function syncModeButtons(){
+  document.querySelectorAll('#mode-row button').forEach(b =>
+    b.classList.toggle('on', b.dataset.mode === params.mode));
+  document.querySelectorAll('#polyshape-row button').forEach(b =>
+    b.classList.toggle('on', b.dataset.shape === params.polyShape));
+}
+
+function updateVisibility(){
+  const isPoly = params.mode === 'polygon';
+
+  const wrap = $('polyshape-wrap'); if (wrap) wrap.style.display = isPoly ? '' : 'none';
+  const sec = $('shape-section'); if (sec) sec.style.display = isPoly ? 'none' : '';
+
+  const shapePanels = {
+    polygon: 'polygon-controls',
+    voronoi: 'voronoi-controls',
+    cellular: 'cellular-controls',
+    blocks: 'blocks-controls'
+  };
+  Object.entries(shapePanels).forEach(([shape, id]) => {
+    const el = $(id); if (!el) return;
+    el.style.display = (isPoly && params.polyShape === shape) ? '' : 'none';
+  });
+  const ca = $('colorassign-controls'); if (ca) ca.style.display = isPoly ? '' : 'none';
+
+  // Per-slider visibility
+  SLIDERS.forEach(def => {
+    const el = sliderEls[def.key];
+    if (!el || !el.row) return;
+    let show = true;
+    if (def.modes && !def.modes.includes(params.mode)) show = false;
+    if (show && def.shapes && isPoly && !def.shapes.includes(params.polyShape)) show = false;
+    el.row.style.display = show ? '' : 'none';
+  });
+
+  // Outline (polygon shape only)
+  const outlinePanel = $('outline-controls');
+  if (outlinePanel){
+    const show = (isPoly && params.polyShape === 'polygon');
+    outlinePanel.style.display = show ? '' : 'none';
+    const prev = outlinePanel.previousElementSibling;
+    if (prev && prev.classList && prev.classList.contains('subhead')){
+      prev.style.display = show ? '' : 'none';
+    }
+  }
+
+  // Effects panels visible only in polygon mode
+  ['pixelize','spots','rain','hex','motion'].forEach(g => {
+    const el = $(g + '-controls'); if (!el) return;
+    el.style.display = isPoly ? '' : 'none';
+    const prev = el.previousElementSibling;
+    if (prev && prev.classList && prev.classList.contains('subhead')){
+      prev.style.display = isPoly ? '' : 'none';
+    }
+  });
+}
+
+function buildPaletteSelect(){
+  const sel = $('palette-preset'); if (!sel) return;
+  sel.innerHTML = '';
+  Object.keys(PALETTES).forEach(key => {
+    const o = document.createElement('option');
+    o.value = key; o.textContent = PALETTES[key].label;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => applyPalettePreset(sel.value));
+}
+function applyPalettePreset(name){
+  const p = PALETTES[name]; if (!p) return;
+  params.palette = p.palette.slice();
+  params.weights = p.weights.slice();
+  buildPaletteUI();
+  scheduleRender();
+}
+
+function buildControls(){
+  const groups = ['polygon','voronoi','cellular','blocks','colorassign','shape','detail',
+                  'render','outline','pixelize','spots','rain','hex','motion','editcolor','editedge'];
+  groups.forEach(g => {
+    const el = $(g + '-controls');
+    if (el) el.innerHTML = '';
+  });
+
+  SLIDERS.forEach(def => {
+    const host = $(def.group + '-controls');
+    if (!host) return;
+    const row = document.createElement('div'); row.className = 'ctrl';
+    const label = document.createElement('label'); label.textContent = def.label;
+    if (def.hint) label.title = def.hint;
+    const out = document.createElement('output'); out.textContent = fmtNum(params[def.key]);
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = def.min; input.max = def.max; input.step = def.step;
+    input.value = params[def.key];
+    input.title = def.hint || '';
+    input.addEventListener('input', () => {
+      params[def.key] = parseFloat(input.value);
+      out.textContent = fmtNum(params[def.key]);
+      markCustom(); scheduleRender();
+    });
+    row.append(label, out, input);
+    host.appendChild(row);
+    sliderEls[def.key] = {input, out, row};
+  });
+
+  // ORDER dropdown
+  const polyHost = $('polygon-controls');
+  if (polyHost){
+    const row = document.createElement('div'); row.className = 'ctrl';
+    const label = document.createElement('label'); label.textContent = 'ORDER';
+    const sel = document.createElement('select'); sel.style.margin = '0';
+    [['bfirst','B FIRST'],['afirst','A FIRST'],['random','RANDOM']].forEach(([v,t]) => {
+      const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
+    });
+    sel.value = params.recurseOrder;
+    sel.addEventListener('change', () => { params.recurseOrder = sel.value; markCustom(); scheduleRender(); });
+    row.append(label, sel);
+    polyHost.appendChild(row);
+  }
+
+  // OUTLINE colour
+  const outlineHost = $('outline-controls');
+  if (outlineHost){
+    const row = document.createElement('div'); row.className = 'ctrl';
+    const label = document.createElement('label'); label.textContent = 'COLOR';
+    const sel = document.createElement('select'); sel.style.margin = '0';
+    ['dark','light'].forEach(v => {
+      const o = document.createElement('option'); o.value = v; o.textContent = v.toUpperCase(); sel.appendChild(o);
+    });
+    sel.value = params.outlineColor;
+    sel.addEventListener('change', () => { params.outlineColor = sel.value; markCustom(); scheduleRender(); });
+    row.append(label, sel);
+    outlineHost.appendChild(row);
+  }
+
+  // PIXELATE toggle in render (noise only)
+  const renderHost = $('render-controls');
+  if (renderHost){
+    const row = document.createElement('div'); row.className = 'ctrl toggle';
+    const label = document.createElement('label'); label.textContent = 'PIXELATE';
+    const el = document.createElement('input'); el.type = 'checkbox'; el.checked = params.digital;
+    el.addEventListener('change', () => { params.digital = el.checked; markCustom(); scheduleRender(); });
+    row.append(label, el);
+    renderHost.appendChild(row);
+    sliderEls._digital = el;
+  }
+
+  updateVisibility();
+}
+
+function buildPaletteUI(){
+  const host = $('palette'); if (!host) return;
+  host.innerHTML = '';
+  params.palette.forEach((hex, i) => {
+    const row = document.createElement('div'); row.className = 'swatch';
+    const col = document.createElement('input'); col.type = 'color'; col.value = hex;
+    col.addEventListener('input', () => { params.palette[i] = col.value; markCustom(); scheduleRender(); });
+    const wt = document.createElement('input');
+    wt.type = 'range'; wt.min = 1; wt.max = 100; wt.step = 1; wt.value = params.weights[i];
+    wt.title = 'Coverage weight';
+    wt.addEventListener('input', () => { params.weights[i] = parseFloat(wt.value); markCustom(); scheduleRender(); });
+    const del = document.createElement('button'); del.className = 'del'; del.textContent = '×';
+    del.disabled = params.palette.length <= 2;
+    del.addEventListener('click', () => {
+      if (params.palette.length <= 2) return;
+      params.palette.splice(i, 1); params.weights.splice(i, 1);
+      markCustom(); buildPaletteUI(); renderPattern();
+    });
+    row.append(col, wt, del);
+    host.appendChild(row);
+  });
+}
+
+function bindButtons(){
+  const addColor = $('add-color');
+  if (addColor) addColor.addEventListener('click', () => {
+    if (params.palette.length >= 10) return;
+    params.palette.push(randomHex()); params.weights.push(15);
+    markCustom(); buildPaletteUI(); renderPattern();
+  });
+  const reseed = $('reseed');
+  if (reseed) reseed.addEventListener('click', () => {
+    params.seed = Math.floor(Math.random()*99999); renderPattern();
+  });
+  const rnd = $('randomize');
+  if (rnd) rnd.addEventListener('click', randomize);
+  const savePng = $('save-png');
+  if (savePng) savePng.addEventListener('click', exportPNG);
+  const saveSvg = $('save-svg');
+  if (saveSvg) saveSvg.addEventListener('click', exportSVG);
+}
+
+function syncUI(){
+  syncModeButtons();
+  highlightPreset(currentPreset);
+  SLIDERS.forEach(def => {
+    const el = sliderEls[def.key]; if (!el) return;
+    el.input.value = params[def.key];
+    el.out.textContent = fmtNum(params[def.key]);
+  });
+  if (sliderEls._digital) sliderEls._digital.checked = params.digital;
+
+  const orderSel = document.querySelector('#polygon-controls select');
+  if (orderSel) orderSel.value = params.recurseOrder;
+  const ocSel = document.querySelector('#outline-controls select');
+  if (ocSel) ocSel.value = params.outlineColor;
+
+  buildPaletteUI();
+  updateHUD();
+  updateVisibility();
+}
+function markCustom(){
+  if (currentPreset === 'custom') return;
+  currentPreset = 'custom';
+  highlightPreset('custom');
+}
+function fmtNum(v){ return (Math.round(v*100)/100).toString(); }
+
+function applyPreset(name){
+  const preset = PRESETS[name]; if (!preset) return;
+  currentPreset = name;
+
+  // Preserve mode + polyShape across preset changes
+  const keepMode = params.mode;
+  const keepShape = params.polyShape;
+
+  const hp = hydrateParamsFromPreset(preset);
+  const clone = Object.assign({}, EDIT_DEFAULTS, POLY_DEFAULTS, hp);
+  Object.keys(clone).forEach(k => { params[k] = clone[k]; });
+
+  params.mode = keepMode;
+  params.polyShape = keepShape;
+
+  params.seed = Math.floor(Math.random()*99999);
+  syncUI(); renderPattern();
+}
+
+function randomize(){
+  const palKeys = Object.keys(PALETTES);
+  const rp = PALETTES[palKeys[Math.floor(Math.random()*palKeys.length)]];
+  params.palette = rp.palette.slice();
+  params.weights = rp.weights.slice();
+
+  params.mode = Math.random() < 0.5 ? 'polygon' : 'noise';
+  const shapes = ['polygon','voronoi','cellular','blocks'];
+  params.polyShape = shapes[Math.floor(Math.random()*shapes.length)];
+
+  // Noise
+  params.scale = 2 + Math.random()*6;
+  params.stretch = 0.3 + Math.random()*1.4;
+  params.rotation = Math.floor(Math.random()*180);
+  params.octaves = 2 + Math.floor(Math.random()*3);
+  params.warp = Math.random()*1.5;
+  params.anisotropy = Math.random() < 0.3 ? Math.random()*0.9 : 0;
+  params.microScale = 4 + Math.random()*18;
+  params.microStrength = Math.random()*0.35;
+  params.contrast = 1.4 + Math.random()*2.0;
+  params.grain = Math.random()*0.25;
+  params.colorJitter = Math.random()*0.25;
+  params.digital = Math.random() < 0.25;
+  params.pixelSize = 2 + Math.floor(Math.random()*8);
+  params.speckle = Math.random() < 0.3 ? Math.random()*0.08 : 0;
+
+  // Polygon
+  params.polygonSize = 60 + Math.floor(Math.random()*450);
+  params.maxDepth = 4 + Math.floor(Math.random()*8);
+  params.splitMin = 0.3 + Math.random()*0.15;
+  params.splitMax = 0.55 + Math.random()*0.2;
+  if (params.splitMin >= params.splitMax) params.splitMax = params.splitMin + 0.1;
+  params.cornerSmooth = Math.random() < 0.3 ? Math.random()*0.6 : 0;
+  params.edgeNoise = Math.random() < 0.3 ? Math.random()*8 : 0;
+
+  // Shape variants
+  params.voronoiPoints = 60 + Math.floor(Math.random()*800);
+  params.voronoiRelax = Math.floor(Math.random()*3);
+  params.voronoiWeight = Math.random()*0.8;
+  params.cellSize = 3 + Math.floor(Math.random()*20);
+  params.cellIterations = 1 + Math.floor(Math.random()*6);
+  params.cellThreshold = 0.4 + Math.random()*0.2;
+  params.cellKeepProb = Math.random()*0.5;
+  params.blockSize = 4 + Math.floor(Math.random()*30);
+  params.blockMergeProb = Math.random()*0.8;
+  params.blockAspect = 0.6 + Math.random()*0.8;
+
+  // Colour assignment
+  params.colorBleed = Math.floor(Math.random()*8);
+  params.bleedWeight = 0.5 + Math.random()*0.5;
+  params.randomChance = Math.random()*0.15;
+  params.colorBias = Math.random()*0.5;
+  params.polyRotation = Math.floor(Math.random()*360);
+
+  // Effects
+  params.outlineWidth = Math.random() < 0.35 ? Math.floor(Math.random()*4) : 0;
+  params.outlineColor = Math.random() < 0.5 ? 'dark' : 'light';
+  params.pixelAmount = Math.random() < 0.25 ? Math.random()*0.6 : 0;
+  params.pixelSampling = Math.floor(Math.random()*15);
+  params.pixelDensityX = 40 + Math.floor(Math.random()*160);
+  params.pixelDensityY = 40 + Math.floor(Math.random()*160);
+  params.spotsAmount = Math.random() < 0.35 ? Math.floor(Math.random()*1200) : 0;
+  params.spotsRadiusMin = 4 + Math.random()*20;
+  params.spotsRadiusMax = params.spotsRadiusMin + 4 + Math.random()*30;
+  params.spotsSampling = Math.floor(Math.random()*15);
+  params.rainAmount = Math.random() < 0.15 ? Math.floor(Math.random()*400) : 0;
+  params.rainLength = 10 + Math.random()*50;
+  params.rainAngle = 40 + Math.random()*100;
+  params.hexSize = Math.random() < 0.15 ? 8 + Math.random()*30 : 0;
+  params.hexOpacity = 0.2 + Math.random()*0.5;
+  params.motionLength = Math.random() < 0.2 ? Math.floor(Math.random()*30) : 0;
+  params.motionAngle = Math.floor(Math.random()*360);
+  params.motionSamples = 4 + Math.floor(Math.random()*8);
+
+  // Edit
+  params.blobSmooth = Math.random() < 0.5 ? Math.random()*4 : 0;
+  params.edgeBlend = Math.random() < 0.5 ? Math.random()*0.08 : 0;
+  params.hueShift = Math.random() < 0.1 ? (Math.random()*60 - 30) : 0;
+  params.saturation = Math.random() < 0.3 ? 0.7 + Math.random()*0.6 : 1.0;
+  params.brightness = Math.random() < 0.3 ? 0.85 + Math.random()*0.3 : 1.0;
+  params.warmth = Math.random() < 0.3 ? (Math.random()*0.6 - 0.3) : 0;
+  params.fade = Math.random() < 0.3 ? Math.random()*0.3 : 0;
+
+  params.seed = Math.floor(Math.random()*99999);
+  currentPreset = 'custom';
+  syncUI(); renderPattern();
+}
+
+function randomHex(){ return '#' + Math.floor(Math.random()*0xffffff).toString(16).padStart(6, '0'); }
+
+/* ---------------- init ---------------- */
+async function initDownloads(){
+  try {
+    downloadsCap = (window.claude && window.claude.use)
+      ? await window.claude.use('downloads')
+      : null;
+  } catch(e){ downloadsCap = null; }
+}
+
+function init(){
+  try {
+    buildPresetGrid();
+    buildModeRow();
+    buildPaletteSelect();
+    buildControls();
+    buildPaletteUI();
+    bindButtons();
+    fitCanvas();
+    ready = true;
+    applyPreset('blob');
+    initDownloads();
+    window.addEventListener('resize', scheduleResize);
+  } catch (e){
+    console.error('init failed', e);
+    setStatus('INIT ERROR: ' + e.message, false, true);
+  }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+</script>
+</body>
+</html>
